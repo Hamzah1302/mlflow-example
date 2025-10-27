@@ -1,0 +1,88 @@
+# Ini adalah nama Workflow Anda. 
+# Nama ini akan muncul di tab "Actions" di repositori GitHub.
+name: CI MLflow
+ 
+# Ini adalah EVENT atau PEMICU (Trigger). 
+# Kapan workflow ini harus dijalankan?
+on:
+  # 1. Saat ada 'push' (cth: git push)
+  push:
+    # Hanya jika push-nya ke branch 'master'
+    branches:
+      - master
+  # 2. Saat ada 'pull request'
+  pull_request:
+    # Hanya jika pull request-nya ditujukan ke branch 'master'
+    branches:
+      - master
+ 
+# Ini adalah 'catatan tempel' (sticky notes) untuk si robot.
+# Kita mengatur Variabel Lingkungan (Environment Variables) 
+# yang bisa diakses di seluruh job.
+env:
+  CSV_URL: "Project/wine-quality.csv" # Lokasi data
+  TARGET_VAR: "quality"               # Variabel target
+  ALPHA: 0.5                          # Hyperparameter 1
+  L1_RATIO: 0.5                       # Hyperparameter 2
+  RANDOM_STATE: 42
+ 
+# Ini adalah daftar PEKERJAAN (Jobs) yang harus dilakukan.
+jobs:
+  # Kita punya 1 job, kita beri nama 'build'
+  build:
+    # Di mana job ini harus dijalankan? 
+    # Jawab: Di server sementara (runner) yang disediakan GitHub 
+    # dengan OS 'ubuntu-latest'.
+    runs-on: ubuntu-latest
+ 
+    # Ini adalah LANGKAH-LANGKAH (Steps) yang harus dilakukan 
+    # di dalam job 'build' (secara berurutan).
+    steps:
+      # Langkah 1: "Checkout"
+      # 'uses' berarti kita pakai 'action' (perintah) yang sudah jadi.
+      # 'actions/checkout@v3' adalah perintah untuk men-download
+      # kode dari repositori Anda ke dalam runner.
+      - uses: actions/checkout@v3
+ 
+      # Langkah 2: "Setup Python"
+      # 'name' adalah label untuk langkah ini di log.
+      - name: Set up Python 3.12.7
+        # Kita pakai action 'setup-python@v4'
+        uses: actions/setup-python@v4
+        # 'with' adalah parameter untuk action tsb.
+        with:
+          # Kita minta spesifik Python versi 3.12.7
+          python-version: "3.12.7"
+      
+      # Langkah 3: "Cek Variabel"
+      # 'run' berarti kita menjalankan perintah shell (terminal).
+      - name: Check Env
+        run: |
+          # Perintah 'echo' ini hanya untuk nge-cek di log 
+          # apakah variabel $CSV_URL sudah terbaca dengan benar.
+          echo $CSV_URL
+ 
+      # Langkah 4: "Install Dependencies"
+      - name: Install dependencies
+        run: |
+          # 'python -m pip install --upgrade pip' -> upgrade pip
+          # 'pip install mlflow' -> Install library MLflow
+          # 
+          # Kenapa hanya mlflow? Karena dependency lain (sklearn, pandas)
+          # akan diurus oleh 'mlflow run' di langkah berikutnya
+          # yang membaca file 'conda.yaml' di dalam 'Project/'.
+          python -m pip install --upgrade pip
+          pip install mlflow
+      
+      # Langkah 5: "Jalankan Proyek MLflow" (Ini Puncaknya!)
+      - name: Run mlflow project
+        run: |
+          # Ini adalah perintah ajaibnya.
+          # 'mlflow run Project' -> Pergi ke folder 'Project'
+          # cari file 'MLproject', dan jalankan entry point 'main'
+          # (yaitu 'python train.py ...')
+          # 
+          # '--env-manager=local' -> Bilang ke MLflow: "Tidak usah
+          # buat environment Conda baru, pakai saja environment
+          # (runner) yang sudah ada sekarang."
+          mlflow run Project --env-manager=local
